@@ -105,8 +105,12 @@ def make_vertical(image: str, hook: str, out: str, kicker: str = "", label: str 
         shade.paste(int(240 * max(0.0, (y - h * 0.5) / (h * 0.5)) ** 1.2), (0, y, w, y + 1))
     base = Image.composite(Image.new("RGB", (w, h), (10, 9, 8)), base, shade)
     d = ImageDraw.Draw(base)
-    big = _font(SERIF_BOLD, 130)
     lines = hook.upper().split("\n")
+    size = 130
+    big = _font(SERIF_BOLD, size)
+    while size > 70 and max(d.textlength(l, font=big) for l in lines) > w * 0.9:  # long lines shrink, never clip
+        size -= 6
+        big = _font(SERIF_BOLD, size)
     y = h - 260 - len(lines) * 140
     if label:
         lf = _fit_spaced(d, label.upper(), SERIF_BOLD, 52, 8, w * 0.86)
