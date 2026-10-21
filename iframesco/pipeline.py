@@ -61,16 +61,23 @@ def _candidates(scene: dict, subject: str, fmt, use_youtube: bool, work: str, id
             path = os.path.expanduser(raw[6:].strip())
             kind = "video" if path.lower().endswith((".mp4", ".mov", ".webm", ".mkv")) else "image"
             cands.append({"file": path, "kind": kind, "source": "local", "preview": ""})
-        elif raw.lower().startswith("file:"):  # an exact file, chosen by a person: used as-is, in order
-            cands += research.file_image(raw[5:].strip())
-        elif raw.lower().startswith("wiki:"):  # photos from that Wikipedia article: hand-picked, on topic
-            cands += research.wiki_images(raw[5:].strip())
-        elif not wiki_only:
-            cands += research.stock_videos(q, 2, fmt.orientation)
-            cands += research.commons_images(q, 6)
+        else:
+            try:
+                if raw.lower().startswith("file:"):  # an exact file, chosen by a person: used as-is, in order
+                    cands += research.file_image(raw[5:].strip())
+                elif raw.lower().startswith("wiki:"):  # photos from that Wikipedia article: hand-picked, on topic
+                    cands += research.wiki_images(raw[5:].strip())
+                elif not wiki_only:
+                    cands += research.stock_videos(q, 2, fmt.orientation)
+                    cands += research.commons_images(q, 6)
+            except Exception as e:  # a rate-limited or failing lookup costs one keyword, not the whole render
+                print(f"[media] skip keyword {raw!r}: {e}")
     exact = all(k.lower().startswith(("file:", "local:")) for k in scene.get("keywords") or ["-"])
     if len(cands) < 3 and not exact:  # hand-picked files: never pad with other pictures
-        cands += research.wiki_images(subject) or research.commons_images(subject, 6)
+        try:
+            cands += research.wiki_images(subject) or research.commons_images(subject, 6)
+        except Exception as e:
+            print(f"[media] skip subject fallback: {e}")
     seen, out = set(), []
     for c in cands:
         key = c.get("file") or c["url"]
