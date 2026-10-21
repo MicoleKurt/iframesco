@@ -42,6 +42,14 @@ def test_respell_maps_back_to_real_spelling():
     assert out[0]["start"] == 0 and out[0]["end"] == 4
 
 
+def test_respell_survives_engine_splitting_a_hyphenated_respelling():
+    text, plan = voice.respell("It began in Yemen, and spread.", {"Yemen": "Yeh-men"})
+    words = [{"text": w, "start": i, "end": i + 1} for i, w in enumerate(["It", "began", "in", "Yeh", "men", "and", "spread"])]
+    out = voice._remap(words, plan)
+    assert [w["text"] for w in out] == ["It", "began", "in", "Yemen", "and", "spread"]
+    assert out[3]["start"] == 3 and out[3]["end"] == 5
+
+
 def test_factcheck_drops_invented_numbers():
     src = "Steamboat Willie premiered in New York in 1928."
     text, dropped = factcheck.clean("It premiered in 1928. It cost 4500 dollars.", src)

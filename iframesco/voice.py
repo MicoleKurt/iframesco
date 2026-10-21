@@ -39,7 +39,7 @@ def resolve(preset: str | None) -> tuple[str, str, int, str]:
 
 # ---------------------------------------------------------------- pronunciation
 
-def respell(text: str, pronounce: dict[str, str] | None) -> tuple[str, list[tuple[int, str]]]:
+def respell(text: str, pronounce: dict[str, str] | None) -> tuple[str, list[tuple[int, str, str]]]:
     """Swap hard names for phonetic spellings. Returns the text to speak plus, per original word,
     how many spoken words it became, so timings map back to the real spelling."""
     plan, spoken = [], []
@@ -48,19 +48,28 @@ def respell(text: str, pronounce: dict[str, str] | None) -> tuple[str, list[tupl
         alt = (pronounce or {}).get(core)
         say = word.replace(core, alt) if alt else word
         spoken.append(say)
-        plan.append((len(say.split()), word))
+        plan.append((len(say.split()), word, say))
     return " ".join(spoken), plan
 
 
-def _remap(words: list[dict], plan: list[tuple[int, str]]) -> list[dict]:
-    if len(words) != sum(n for n, _ in plan):  # engine split differently; keep raw timings
-        return words
+def _letters(text: str) -> str:
+    return re.sub(r"[\W_]+", "", text).lower()
+
+
+def _remap(words: list[dict], plan: list[tuple[int, str, str]]) -> list[dict]:
+    """Map the engine's word timings back onto the real spelling. When the engine splits a respelling
+    ("Yeh-men" -> "Yeh", "men") the counts differ, so tokens are matched by their letters instead."""
     out, i = [], 0
-    for n, display in plan:
-        group = words[i:i + n]
+    for _, display, say in plan:
+        want, got, j = _letters(say), "", i
+        while j < len(words) and (len(got) < len(want) or j == i):
+            got += _letters(words[j]["text"])
+            j += 1
+        if got != want or j == i:  # the engine said something else: keep its raw timings
+            return words
         out.append({"text": re.sub(r"^\W+|\W+$", "", display),
-                    "start": group[0]["start"], "end": group[-1]["end"]})
-        i += n
+                    "start": words[i]["start"], "end": words[j - 1]["end"]})
+        i = j
     return out
 
 
