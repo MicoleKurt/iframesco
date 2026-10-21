@@ -50,6 +50,14 @@ def test_respell_survives_engine_splitting_a_hyphenated_respelling():
     assert out[3]["start"] == 3 and out[3]["end"] == 5
 
 
+def test_respell_survives_engine_merging_words():
+    text, plan = voice.respell("It fell. In 1524, Suleiman won.", {"Suleiman": "Soo-lay-mahn"})
+    words = [{"text": w, "start": i, "end": i + 1} for i, w in enumerate(["It", "fell", "In 1524", "Soo-lay-mahn", "won"])]
+    out = voice._remap(words, plan)
+    assert [w["text"] for w in out] == ["It", "fell", "In", "1524", "Suleiman", "won"]
+    assert out[4]["start"] == 3 and out[4]["end"] == 4
+
+
 def test_factcheck_drops_invented_numbers():
     src = "Steamboat Willie premiered in New York in 1928."
     text, dropped = factcheck.clean("It premiered in 1928. It cost 4500 dollars.", src)

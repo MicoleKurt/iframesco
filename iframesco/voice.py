@@ -57,19 +57,29 @@ def _letters(text: str) -> str:
 
 
 def _remap(words: list[dict], plan: list[tuple[int, str, str]]) -> list[dict]:
-    """Map the engine's word timings back onto the real spelling. When the engine splits a respelling
-    ("Yeh-men" -> "Yeh", "men") the counts differ, so tokens are matched by their letters instead."""
-    out, i = [], 0
+    """Map the engine's word timings back onto the real spelling. The engine may split a respelling
+    ("Yeh-men" -> "Yeh", "men") or merge words ("In 1524"), so words are aligned by letter position and
+    each caption word gets the time its letters were spoken."""
+    spans, pos = [], 0
+    for w in words:
+        n = len(_letters(w["text"]))
+        spans.append((pos, pos + n, w))
+        pos += n
+    if pos != sum(len(_letters(say)) for _, _, say in plan):  # the engine said something else: raw timings
+        return words
+
+    def at(p: int) -> float:
+        for lo, hi, w in spans:
+            if lo <= p <= hi and hi > lo:
+                return w["start"] + (p - lo) / (hi - lo) * (w["end"] - w["start"])
+        return spans[-1][2]["end"]
+
+    out, p = [], 0
     for _, display, say in plan:
-        want, got, j = _letters(say), "", i
-        while j < len(words) and (len(got) < len(want) or j == i):
-            got += _letters(words[j]["text"])
-            j += 1
-        if got != want or j == i:  # the engine said something else: keep its raw timings
-            return words
-        out.append({"text": re.sub(r"^\W+|\W+$", "", display),
-                    "start": words[i]["start"], "end": words[j - 1]["end"]})
-        i = j
+        n = len(_letters(say))
+        start, end = at(p), at(p + n)
+        out.append({"text": re.sub(r"^\W+|\W+$", "", display), "start": start, "end": max(end, start + 0.05)})
+        p += n
     return out
 
 
