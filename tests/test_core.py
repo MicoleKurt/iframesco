@@ -215,3 +215,12 @@ def test_pick_images_maps_numbers_to_exact_files(monkeypatch):
     assert scenes[0]["keywords"] == ["file:A.jpg", "wiki:Article"]
     assert scenes[1]["keywords"] == ["file:B.jpg", "wiki:Article"]  # 9 is out of range and ignored
     assert scenes[2]["keywords"] == ["S"]  # nothing fit: falls back to search queries
+
+
+def test_tall_portraits_are_not_cropped_on_a_landscape_canvas(tmp_path, monkeypatch):
+    from PIL import Image
+    from iframesco import render
+    monkeypatch.setattr(render, "W", 1920); monkeypatch.setattr(render, "H", 1080)
+    tall, wide = tmp_path / "t.jpg", tmp_path / "w.jpg"
+    Image.new("RGB", (600, 900)).save(tall); Image.new("RGB", (1600, 900)).save(wide)
+    assert render._too_tall(str(tall)) and not render._too_tall(str(wide))

@@ -66,6 +66,18 @@ def _too_wide(img: str) -> bool:
     return (w / h) / (W / H) > 1.8
 
 
+def _too_tall(img: str) -> bool:
+    """True when the photo is so much narrower than the canvas that cropping to it would cut off its top and bottom
+    (a portrait on a landscape canvas loses the eyes)."""
+    try:
+        from PIL import Image
+        with Image.open(img) as im:
+            w, h = im.size
+    except Exception:
+        return False
+    return (w / h) / (W / H) < 0.5
+
+
 def still_clip(img: str, out: str, dur: float, variant: int) -> None:
     """Slow zoom/pan over a still image (Ken Burns), alternating motion per shot."""
     frames = max(1, round(dur * FPS))
@@ -77,6 +89,10 @@ def still_clip(img: str, out: str, dur: float, variant: int) -> None:
         zoom = f"1+0.06*on/{frames}" if variant % 2 == 0 else f"1.06-0.06*on/{frames}"
         frame = (f"split[a][b];[a]scale={bw}:{bh}:force_original_aspect_ratio=increase,crop={bw}:{bh},"
                  f"boxblur=40:3,eq=brightness=-0.18[bg];[b]scale={bw}:-2[fg];[bg][fg]overlay=0:(H-h)/2,")
+    elif _too_tall(img):  # a portrait on a landscape canvas: whole picture over a blurred copy, never cropped
+        zoom = f"1+0.06*on/{frames}" if variant % 2 == 0 else f"1.06-0.06*on/{frames}"
+        frame = (f"split[a][b];[a]scale={bw}:{bh}:force_original_aspect_ratio=increase,crop={bw}:{bh},"
+                 f"boxblur=40:3,eq=brightness=-0.18[bg];[b]scale=-2:{bh}[fg];[bg][fg]overlay=(W-w)/2:0,")
     vf = (frame +
           f"zoompan=z='{zoom}':x='{pan_x.format(f=frames)}':y='ih/2-(ih/zoom/2)'"
           f":d={frames}:s={W}x{H}:fps={FPS},setsar=1")
