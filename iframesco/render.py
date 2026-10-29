@@ -325,8 +325,10 @@ def assemble(work: str, video: str, voice: list[str], out: str, music_file: str 
     fade_in = "" if FMT.vertical else "fade=t=in:d=0.6,"  # Shorts: frame 1 must already show the picture
     ff("-i", video, "-i", "narration.wav", "-i", "music.m4a", "-loop", "1", "-i", "shade.png",
        "-filter_complex",
-       "[1:a]asplit=2[n1][n2];[2:a]volume=0.5[m];"
-       "[m][n1]sidechaincompress=threshold=0.03:ratio=6:release=400[duck];"
+       # clearer voice: cut rumble, even out the TTS level, lift presence; music sits lower and ducks harder
+       "[1:a]highpass=f=70,acompressor=threshold=-20dB:ratio=3:attack=5:release=90:makeup=3,"
+       "equalizer=f=3200:width_type=q:width=1.2:g=2.5,asplit=2[n1][n2];[2:a]volume=0.32[m];"
+       "[m][n1]sidechaincompress=threshold=0.03:ratio=8:release=400[duck];"
        "[n2][duck]amix=inputs=2:duration=first:normalize=0,loudnorm=I=-14:TP=-1.5[a];"
        # film look: gentle contrast, muted warm palette, vignette, grain, fades
        "[0:v]eq=contrast=1.07:saturation=0.86:gamma=0.98,"

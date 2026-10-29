@@ -224,3 +224,10 @@ def test_tall_portraits_are_not_cropped_on_a_landscape_canvas(tmp_path, monkeypa
     tall, wide = tmp_path / "t.jpg", tmp_path / "w.jpg"
     Image.new("RGB", (600, 900)).save(tall); Image.new("RGB", (1600, 900)).save(wide)
     assert render._too_tall(str(tall)) and not render._too_tall(str(wide))
+
+
+def test_portrait_scoring_prefers_tall_big_faces():
+    from iframesco import portraits
+    assert portraits.is_portrait(800, 1100) and not portraits.is_portrait(1600, 900)
+    assert portraits.score(0.2, 1000, 1500) > portraits.score(0.02, 1000, 1500)
+    assert portraits.score(0.2, 1000, 1500) > portraits.score(0.2, 400, 600)
